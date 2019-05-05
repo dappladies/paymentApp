@@ -1,20 +1,14 @@
 pragma solidity >=0.4.0 <0.6.0;
 
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract UserFactory is Ownable {
+using SafeMath for uint256;
 
   /* EVENTS*/
   event FundsRequested(address _from, uint amount);
-
-  // dynamic array of all user addresses
-  address[] public userAddresses;
-
-  // map an address to their User struct
-  mapping (address => User) public userStruct;
-  User[] public users;
-
-  mapping (address => bool) public isUser;
+  event EventCreated(string _name, address owner);
 
   struct User {
     string userName;
@@ -22,12 +16,28 @@ contract UserFactory is Ownable {
   }
 
   struct Event {
-    string name;
+    string eventName;
     address[] people;
+    uint eventBalance;
+    bool eventOver;
   }
 
-  Event[] public events;
-  mapping (uint => address) public eventToOwner;
+  /* USER STATE*/
+  // dynamic array of all user addresses
+  address[] public userAddresses;
+
+  // map an address to their User struct
+  mapping (address => User) public userStruct;
+
+  mapping (address => bool) public isUser;
+
+  // map of users to friends
+  mapping (address => address) public userToFriend;
+
+  // TO DO: map friends to users
+
+  /* EVENT STATE*/
+  mapping (address => Event) public eventStruct;
 
   constructor() public {}
 
@@ -56,25 +66,51 @@ contract UserFactory is Ownable {
     return userStruct[msg.sender].friends;
   }
 
-  // allow users to send funds
-  function sendFunds(address payable _friend) public payable returns (bool) {
-    require(isUser[msg.sender] == true);
-    require(msg.value > 0, 'amount must be bigger than 0');
-    _friend.transfer(msg.value);
-    return true;
-  }
-
   function createEvent(string memory _name) public {
     require(isUser[msg.sender] == true);
-    Event memory e;
-    e.name = _name;
-    uint id = events.push(e) - 1;
-    eventToOwner[id] = msg.sender;
+    // set eventName
+    eventStruct[msg.sender].eventName = _name;
+    eventStruct[_eventOwner].people.push(msg.sender);
+    emit EventCreated(_name, msg.sender);
   }
 
-  // function joinEvent(uint _id) public {
+  function joinEvent(address _eventOwner) public {
+    require(isUser[msg.sender] == true);
+    eventStruct[_eventOwner].people.push(msg.sender);
+  }
+
+  // get events's people
+  function getEventParticipants() public view returns (address[] memory) {
+    require(isUser[msg.sender] == true);
+    return eventStruct[msg.sender].people;
+  }
+
+  function addFundsToEvent(address _eventOwner) public payable {
+    require(eventStruct[_eventOwner].eventOver == false);
+    eventStruct[_eventOwner].eventBalance = eventStruct[_eventOwner].eventBalance.add(msg.value);
+  }
+
+  function endEvent(address _eventOwner) public {
+    eventStruct[_eventOwner].eventOver = true;
+    _distributeFunds(); 
+  }
+
+  // function _distributeFunds(address _eventOwner) private {
+  //   uint funds = eventStruct[_eventOwner].eventBalance;
   //   require(isUser[msg.sender] == true);
-  //   events[_id].push(msg.sender);
+  //   require(msg.value > 0, 'amount must be bigger than 0');
+  //   _friend.transfer(msg.value);
+  //   return true;
+  // }
+
+    // function calculateAmntOwed() public {}
+
+  //   // allow users to send funds
+  // function sendFunds(address payable _friend) public payable returns (bool) {
+  //   require(isUser[msg.sender] == true);
+  //   require(msg.value > 0, 'amount must be bigger than 0');
+  //   _friend.transfer(msg.value);
+  //   return true;
   // }
 
   // // allow users to request funds
@@ -84,11 +120,5 @@ contract UserFactory is Ownable {
 
   //   emit FundsRequested(msg.sender, _amount);
   // }
-
-  // function addFundsToEvent() public {}
-
-  // function endEvent() public {}
-
-  // function calculateAmntOwed() public {}
 
 }
