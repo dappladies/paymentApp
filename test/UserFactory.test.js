@@ -27,7 +27,7 @@ contract('UserFactory', function (accounts) {
       const userName = "kseniya292"
       await paymentAppInstance.createUser(userName);
       const user = await paymentAppInstance.userStruct.call(creator);
-      assert.equal(userName, user)
+      assert.equal(userName, user.userName)
     })
     it('should add user to userAddresses array', async function () {
       const userName = "kseniya292"
@@ -106,8 +106,8 @@ contract('UserFactory', function (accounts) {
       await paymentAppInstance.addFriend(friend2, {from: user1});
       await paymentAppInstance.createEvent(eventName, {from: user1});
       await paymentAppInstance.joinEvent(0, {from: friend1});
-      await paymentAppInstance.addFundsToEvent(0, {from: user1, value: valueSent});
-      await paymentAppInstance.addFundsToEvent(0, {from: friend1, value: valueSent2});
+      await paymentAppInstance.addFundsToEvent(0, valueSent, {from: user1});
+      await paymentAppInstance.addFundsToEvent(0, valueSent2, {from: friend1});
       
       const event = await paymentAppInstance.eventStruct.call(0);
       const total = valueSent + valueSent2;
@@ -119,28 +119,28 @@ contract('UserFactory', function (accounts) {
       const amount2 = await paymentAppInstance.fundsSubmitted.call(friend1, 0);
       assert.equal(amount2.toNumber(), valueSent2)
     })
-    it('should split funds', async function () {
+    it('should calculate funds', async function () {
       const userName = "kseniya292"
       const eventName = "GirlsNightOut"
       const valueSent = 2000000000;
       const valueSent2 = 4000000000;
-      const balance = await web3.eth.getBalance(user1)
-      const balance2 = await web3.eth.getBalance(friend1)
-      // console.log(balance)
-      // console.log(balance2)
+
       await paymentAppInstance.createUser(userName, {from: user1});
       await paymentAppInstance.createUser(userName, {from: friend1});
       await paymentAppInstance.addFriend(friend1, {from: user1});
       await paymentAppInstance.createEvent(eventName, {from: user1});
       await paymentAppInstance.joinEvent(0, {from: friend1});
-      await paymentAppInstance.addFundsToEvent(0, {from: user1, value: valueSent});
-      await paymentAppInstance.addFundsToEvent(0, {from: friend1, value: valueSent2});
+      await paymentAppInstance.addFundsToEvent(0, valueSent, {from: user1});
+      await paymentAppInstance.addFundsToEvent(0, valueSent2, {from: friend1});
       
       await paymentAppInstance.endEvent(0, {from: user1});
-      const balance3 = await web3.eth.getBalance(user1)
-      const balance4 = await web3.eth.getBalance(friend1)
-      // console.log(balance3)
-      // console.log(balance4)
+      const user = await paymentAppInstance.userStruct.call(friend1);
+      const amountOwed = user.balanceOwed.toNumber();
+      assert.equal(amountOwed, 1000000000)
+
+      const user2 = await paymentAppInstance.userStruct.call(user1);
+      const amountOwed2 = user2.needToPay.toNumber();
+      assert.equal(amountOwed2, 1000000000)
     })
   })
 

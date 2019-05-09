@@ -13,13 +13,15 @@ using SafeMath for uint256;
   struct User {
     string userName;
     address[] friends;
+    uint balanceOwed;
+    uint needToPay;
   }
 
   struct Event {
     uint id;
     string eventName;
     address owner;
-    address payable[] people;
+    address [] people;
     uint eventBalance;
     bool eventOver;
   }
@@ -105,16 +107,16 @@ using SafeMath for uint256;
   }
 
   // get events's people
-  function getEventParticipants(uint _id) public view onlyUser returns (address payable[] memory) {
+  function getEventParticipants(uint _id) public view onlyUser returns (address[] memory) {
     // require(isUser[msg.sender] == true);
     return eventStruct[_id].people;
   }
 
-  function addFundsToEvent(uint _id) public onlyUser payable {
+  function addFundsToEvent(uint _id, uint _amount) public onlyUser {
     require(eventStruct[_id].eventOver == false);
-    eventStruct[_id].eventBalance = eventStruct[_id].eventBalance.add(msg.value);
+    eventStruct[_id].eventBalance = eventStruct[_id].eventBalance.add(_amount);
 
-    fundsSubmitted[msg.sender][_id] = msg.value;
+    fundsSubmitted[msg.sender][_id] = _amount;
   }
 
   function endEvent(uint _id) public onlyUser {
@@ -123,12 +125,12 @@ using SafeMath for uint256;
     // set eventOver boolean to true
     eventStruct[_id].eventOver = true;
 
-    _distributeFunds(_id); 
+    _calculateSplit(_id); 
   }
 
-  function _distributeFunds(uint _id) private {
+  function _calculateSplit(uint _id) private {
     uint totalFunds = eventStruct[_id].eventBalance;
-    address payable[] memory eventPeople = eventStruct[_id].people;
+    address[] memory eventPeople = eventStruct[_id].people;
     uint totalPeople = eventStruct[_id].people.length;
     uint splitAmount = totalFunds.div(totalPeople);
 
@@ -136,7 +138,10 @@ using SafeMath for uint256;
       uint fundsPerPerson = fundsSubmitted[eventPeople[i]][_id];
       if (fundsPerPerson > splitAmount) {
         uint overage = fundsPerPerson - splitAmount;
-        eventPeople[i].transfer(overage);
+         userStruct[eventPeople[i]].balanceOwed = overage;
+      } else if (fundsPerPerson < splitAmount) {
+        uint deficit = splitAmount - fundsPerPerson;
+        userStruct[eventPeople[i]].needToPay = deficit;
       }
     }
   }
