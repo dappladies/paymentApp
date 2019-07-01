@@ -49,10 +49,7 @@ using SafeMath for uint256;
   mapping (uint => Event) public eventStruct;
   uint public counter = 0;
 
-  modifier onlyUser() {
-    require(isUser[msg.sender] == true, "Sender must be a user");
-    _;
-  }
+  // TO DO: onlyUser modifier
 
   constructor() public {}
 
@@ -68,21 +65,21 @@ using SafeMath for uint256;
   }
 
   // allow users to add friends
-  function addFriend(address _friend) public onlyUser {
-    // require(isUser[msg.sender] == true);
+  function addFriend(address _friend) public {
+    require(isUser[msg.sender] == true);
 
     // add friend to userStruct
     userStruct[msg.sender].friends.push(_friend);
   }
 
   // get user's friends
-  function getMyFriends() public view onlyUser returns (address[] memory) {
-    // require(isUser[msg.sender] == true);
+  function getMyFriends() public view returns (address[] memory) {
+    require(isUser[msg.sender] == true);
     return userStruct[msg.sender].friends;
   }
 
-  function createEvent(string memory _name) public onlyUser {
-    // require(isUser[msg.sender] == true);
+  function createEvent(string memory _name) public {
+    require(isUser[msg.sender] == true);
 
     uint id = counter++;
 
@@ -107,43 +104,27 @@ using SafeMath for uint256;
   }
 
   // get events's people
-  function getEventParticipants(uint _id) public view onlyUser returns (address[] memory) {
-    // require(isUser[msg.sender] == true);
+  function getEventParticipants(uint _id) public view returns (address[] memory) {
+    require(isUser[msg.sender] == true);
     return eventStruct[_id].people;
   }
 
-  function addFundsToEvent(uint _id, uint _amount) public onlyUser {
+  function addFundsToEvent(uint _id, uint _amount) public {
     require(eventStruct[_id].eventOver == false);
     eventStruct[_id].eventBalance = eventStruct[_id].eventBalance.add(_amount);
 
     fundsSubmitted[msg.sender][_id] = _amount;
   }
 
-  function endEvent(uint _id) public onlyUser {
+  function endEvent(uint _id) public {
     require(eventStruct[_id].owner == msg.sender);
 
     // set eventOver boolean to true
     eventStruct[_id].eventOver = true;
 
-    _calculateSplit(_id); 
+    // _calculateSplit(_id); 
   }
 
-  function _calculateSplit(uint _id) private {
-    uint totalFunds = eventStruct[_id].eventBalance;
-    address[] memory eventPeople = eventStruct[_id].people;
-    uint totalPeople = eventStruct[_id].people.length;
-    uint splitAmount = totalFunds.div(totalPeople);
-
-    for (uint i = 0; i < totalPeople; i++) {
-      uint fundsPerPerson = fundsSubmitted[eventPeople[i]][_id];
-      if (fundsPerPerson > splitAmount) {
-        uint overage = fundsPerPerson - splitAmount;
-         userStruct[eventPeople[i]].balanceOwed = overage;
-      } else if (fundsPerPerson < splitAmount) {
-        uint deficit = splitAmount - fundsPerPerson;
-        userStruct[eventPeople[i]].needToPay = deficit;
-      }
-    }
-  }
+  // TO DO: CALCULATE SPLIT
 
 }

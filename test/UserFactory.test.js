@@ -119,29 +119,6 @@ contract('UserFactory', function (accounts) {
       const amount2 = await paymentAppInstance.fundsSubmitted.call(friend1, 0);
       assert.equal(amount2.toNumber(), valueSent2)
     })
-    it('should calculate funds', async function () {
-      const userName = "kseniya292"
-      const eventName = "GirlsNightOut"
-      const valueSent = 2000000000;
-      const valueSent2 = 4000000000;
-
-      await paymentAppInstance.createUser(userName, {from: user1});
-      await paymentAppInstance.createUser(userName, {from: friend1});
-      await paymentAppInstance.addFriend(friend1, {from: user1});
-      await paymentAppInstance.createEvent(eventName, {from: user1});
-      await paymentAppInstance.joinEvent(0, {from: friend1});
-      await paymentAppInstance.addFundsToEvent(0, valueSent, {from: user1});
-      await paymentAppInstance.addFundsToEvent(0, valueSent2, {from: friend1});
-      
-      await paymentAppInstance.endEvent(0, {from: user1});
-      const user = await paymentAppInstance.userStruct.call(friend1);
-      const amountOwed = user.balanceOwed.toNumber();
-      assert.equal(amountOwed, 1000000000)
-
-      const user2 = await paymentAppInstance.userStruct.call(user1);
-      const amountOwed2 = user2.needToPay.toNumber();
-      assert.equal(amountOwed2, 1000000000)
-    })
   })
 
 })
