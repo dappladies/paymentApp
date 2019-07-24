@@ -17,7 +17,6 @@ contract('UserFactory', function (accounts) {
   const friend3 = accounts[4]
 
   beforeEach(async function () {
-
     paymentApp = await UserFactory.new();
     paymentAppInstance = await UserFactory.at(paymentApp.address);
   })
@@ -25,9 +24,9 @@ contract('UserFactory', function (accounts) {
   describe('createUser', function () {
     it('should create user', async function () {
       const userName = "kseniya292"
-      await paymentAppInstance.createUser(userName);
-      const user = await paymentAppInstance.userStruct.call(creator);
-      assert.equal(userName, user.userName)
+      await paymentAppInstance.createUser(userName, {from: user1});
+      const user = await paymentAppInstance.userStruct.call(user1);
+      assert.equal(userName, user)
     })
     it('should add user to userAddresses array', async function () {
       const userName = "kseniya292"
@@ -95,6 +94,18 @@ contract('UserFactory', function (accounts) {
       const x = await paymentAppInstance.getEventParticipants(0, {from: user1})
       assert.equal(x[1], friend1)
     })
+    it('should increment numOfPeople by 1', async function () {
+      const userName = "kseniya292"
+      const eventName = "GirlsNightOut"
+      await paymentAppInstance.createUser(userName, {from: user1});
+      await paymentAppInstance.createUser(userName, {from: friend1});
+      await paymentAppInstance.addFriend(friend1, {from: user1});
+      await paymentAppInstance.addFriend(friend2, {from: user1});
+      await paymentAppInstance.createEvent(eventName, {from: user1});
+      await paymentAppInstance.joinEvent(0, {from: friend1});
+      const x = await paymentAppInstance.getEventInfo(0, {from: user1})
+      assert.equal(x[4], 2)
+    })
     it('should allow user to add funds to event', async function () {
       const userName = "kseniya292"
       const eventName = "GirlsNightOut"
@@ -106,18 +117,60 @@ contract('UserFactory', function (accounts) {
       await paymentAppInstance.addFriend(friend2, {from: user1});
       await paymentAppInstance.createEvent(eventName, {from: user1});
       await paymentAppInstance.joinEvent(0, {from: friend1});
-      await paymentAppInstance.addFundsToEvent(0, valueSent, {from: user1});
-      await paymentAppInstance.addFundsToEvent(0, valueSent2, {from: friend1});
+      await paymentAppInstance.addFundsToEvent(0, valueSent, {from: friend1});
+      const x = await paymentAppInstance.getEventInfo(0, {from: user1});
+      assert.equal(x[3], valueSent);
+    })
+    it('should end event', async function () {
+      const eventName = "GirlsNightOut"
+      const valueSent1 = 2000000000;
+      const valueSent2 = 4000000000;
+      const valueSent3 = 3000000000;
+      await paymentAppInstance.createUser("kseniya292", {from: user1});
+      await paymentAppInstance.createUser("sarah123", {from: friend1});
+      await paymentAppInstance.createUser("jenna123", {from: friend2});
+      await paymentAppInstance.createEvent(eventName, {from: user1});
+
+      await paymentAppInstance.addFriend(friend1, {from: user1});
+      await paymentAppInstance.addFriend(friend2, {from: user1});
       
-      const event = await paymentAppInstance.eventStruct.call(0);
-      const total = valueSent + valueSent2;
-      assert.equal(event.eventBalance.toNumber(), total)
+      await paymentAppInstance.joinEvent(0, {from: friend1});
+      await paymentAppInstance.joinEvent(0, {from: friend2});
 
-      const amount = await paymentAppInstance.fundsSubmitted.call(user1, 0);
-      assert.equal(amount.toNumber(), valueSent)
+      await paymentAppInstance.addFundsToEvent(0, valueSent1, {from: user1});
+      await paymentAppInstance.addFundsToEvent(0, valueSent2, {from: friend1});
+      await paymentAppInstance.addFundsToEvent(0, valueSent3, {from: friend2});
 
-      const amount2 = await paymentAppInstance.fundsSubmitted.call(friend1, 0);
-      assert.equal(amount2.toNumber(), valueSent2)
+      await paymentAppInstance.endEvent(0, {from: user1});
+
+      const x = await paymentAppInstance.getEventInfo(0, {from: user1});
+      assert.isTrue(x[5]);
+    })
+    it('should end event and split funds', async function () {
+      const eventName = "GirlsNightOut"
+      const valueSent1 = 2000000000;
+      const valueSent2 = 4000000000;
+      const valueSent3 = 3000000000;
+      await paymentAppInstance.createUser("kseniya292", {from: user1});
+      await paymentAppInstance.createUser("sarah123", {from: friend1});
+      await paymentAppInstance.createUser("jenna123", {from: friend2});
+      await paymentAppInstance.createEvent(eventName, {from: user1});
+
+      await paymentAppInstance.addFriend(friend1, {from: user1});
+      await paymentAppInstance.addFriend(friend2, {from: user1});
+      
+      await paymentAppInstance.joinEvent(0, {from: friend1});
+      await paymentAppInstance.joinEvent(0, {from: friend2});
+
+      await paymentAppInstance.addFundsToEvent(0, valueSent1, {from: user1});
+      await paymentAppInstance.addFundsToEvent(0, valueSent2, {from: friend1});
+      await paymentAppInstance.addFundsToEvent(0, valueSent3, {from: friend2});
+
+      await paymentAppInstance.endEvent(0, {from: user1});
+      await paymentAppInstance.deposit(1000000000, {from: user1, value: 100000000});
+      // console.log(await web3.eth.getBalance(paymentApp.address));
+      await paymentAppInstance.withdraw(0, 100000000, {from: friend1});
+      // console.log(await web3.eth.getBalance(paymentApp.address));
     })
   })
 
