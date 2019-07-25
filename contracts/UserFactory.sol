@@ -9,47 +9,44 @@ using SafeMath for uint256;
   /* EVENTS*/
   event FundsRequested(address _from, uint amount);
   event EventCreated(uint id, string _name, address owner);
+  event EventEnded(uint id, uint _split);
 
   struct User {
     string userName;
     address[] friends;
-    uint balanceOwed;
-    uint needToPay;
   }
 
   struct Event {
     uint id;
     string eventName;
     address owner;
-    address [] people;
     uint eventBalance;
     bool eventOver;
+    uint numOfPeople;
   }
 
-  /* USER STATE*/
-  // dynamic array of all user addresses
-  address[] public userAddresses;
-
-  // map an address to their User struct
-  mapping (address => User) public userStruct;
-
-  mapping (address => bool) public isUser;
-
-  // map of users to friends
-  mapping (address => address) public userToFriend;
-
-  // mapping of user to an event to balance owed
-  mapping(address => mapping(uint => uint)) public fundsSubmitted;
-
-  // TO DO: map friends to users
+   /* USER STATE*/
+  address[] public userAddresses; // dynamic array of all user addresses
+  mapping (address => User) public userStruct; // map an address to their User struct
+  mapping (address => bool) public isUser; // map an address to a boolean
+  mapping (address => address) public userToFriend; // map of users to friends
 
   /* EVENT STATE*/
 
-  // mapping of id to an event
-  mapping (uint => Event) public eventStruct;
+  mapping (uint => Event) public eventStruct; // mapping of id to an event
+  mapping(address => mapping(uint => uint)) public fundsSubmitted; // mapping of user to an event to balance owed
+  mapping(uint => address[]) public eventToUsers; // mapping an eventID to its participants
   uint public counter = 0;
 
-  // TO DO: onlyUser modifier
+  modifier onlyUser() {
+    require(isUser[msg.sender]);
+    _;
+  }
+
+  modifier eventNotOver(uint256 _id) {
+    require(!eventStruct[_id].eventOver, "event must not be over");
+    _;
+  }
 
   constructor() public {}
 
@@ -65,66 +62,100 @@ using SafeMath for uint256;
   }
 
   // allow users to add friends
-  function addFriend(address _friend) public {
-    require(isUser[msg.sender] == true);
+  function addFriend(address _friend) public onlyUser {
+    require(isUser[_friend], "address must be a user");
 
     // add friend to userStruct
     userStruct[msg.sender].friends.push(_friend);
+
   }
 
   // get user's friends
-  function getMyFriends() public view returns (address[] memory) {
-    require(isUser[msg.sender] == true);
+  function getMyFriends() public view onlyUser returns (address[] memory) {
     return userStruct[msg.sender].friends;
   }
 
-  function createEvent(string memory _name) public {
-    require(isUser[msg.sender] == true);
-
+  function createEvent(string memory _name) public onlyUser returns(bool) {
     uint id = counter++;
 
-    // set sender an event owner
-    eventStruct[id].owner = msg.sender;
-  
-    // set eventId
-    eventStruct[id].id = id;
+     eventStruct[id] = Event({
+      id: id,
+      eventName: _name,
+      owner: msg.sender,
+      eventBalance: 0,
+      numOfPeople: 1,
+      eventOver: false
+    });
 
-    // set eventName
-    eventStruct[id].eventName = _name;
+    eventToUsers[id].push(msg.sender);
 
-    // add event creator to people array
-    eventStruct[id].people.push(msg.sender);
     emit EventCreated(id, _name, msg.sender);
+    return true;
   }
 
-  function joinEvent(uint _id) public {
-    require(eventStruct[_id].eventOver == false);
-    require(isUser[msg.sender] == true);
-    eventStruct[_id].people.push(msg.sender);
+  function getEventInfo(uint _id) public view onlyUser 
+    returns(uint, string memory, address, uint, uint, bool) 
+    { 
+    Event memory e = eventStruct[_id];
+  	return(
+  		e.id,
+      e.eventName,
+      e.owner,
+      e.eventBalance,
+      e.numOfPeople,
+      e.eventOver
+  	);
+  }
+
+  function joinEvent(uint _id) public onlyUser eventNotOver(_id) {
+    require(!_isEventParticipant(_id, msg.sender));
+    eventToUsers[_id].push(msg.sender);
+    eventStruct[_id].numOfPeople++;
   }
 
   // get events's people
-  function getEventParticipants(uint _id) public view returns (address[] memory) {
-    require(isUser[msg.sender] == true);
-    return eventStruct[_id].people;
+  function getEventParticipants(uint _id) public onlyUser view returns (address[] memory) {
+    return eventToUsers[_id];
   }
 
-  function addFundsToEvent(uint _id, uint _amount) public {
-    require(eventStruct[_id].eventOver == false);
+  function addFundsToEvent(uint _id, uint _amount) public onlyUser {
+    require(_isEventParticipant(_id, msg.sender));
+    // adds to event balance
     eventStruct[_id].eventBalance = eventStruct[_id].eventBalance.add(_amount);
 
-    fundsSubmitted[msg.sender][_id] = _amount;
+    fundsSubmitted[msg.sender][_id] = fundsSubmitted[msg.sender][_id].add(_amount);
   }
 
-  function endEvent(uint _id) public {
+  function endEvent(uint _id) public eventNotOver(_id) {
     require(eventStruct[_id].owner == msg.sender);
 
     // set eventOver boolean to true
     eventStruct[_id].eventOver = true;
 
-    // _calculateSplit(_id); 
+    uint splitAmount = _calculateSplit(_id);
+    emit EventEnded(_id, splitAmount);
   }
 
-  // TO DO: CALCULATE SPLIT
+  function withdraw(uint _id, uint _amount) public onlyUser {
+    require(_isEventParticipant(_id, msg.sender));
+    require(eventStruct[_id].eventOver);
+    msg.sender.transfer(_amount);
+  }
 
+  function deposit() payable public onlyUser {}
+
+  function _calculateSplit(uint _id) private view returns (uint) {
+    uint total = eventStruct[_id].eventBalance;
+    uint totalPeople = eventStruct[_id].numOfPeople;
+    return (total.div(totalPeople));
+  }
+
+  function _isEventParticipant(uint _id, address _participant) private view returns (bool) {
+    address[] memory participants = getEventParticipants(_id);
+    for (uint i = 0; i < participants.length; i++) {
+      if (participants[i] == _participant) {
+        return true;
+      }
+    }
+  }
 }
