@@ -1,3 +1,4 @@
+const { expectRevert } = require('openzeppelin-test-helpers');
 const UserFactory = artifacts.require('UserFactory')
 
 const chai = require('chai')
@@ -9,7 +10,7 @@ contract('UserFactory', function (accounts) {
   const user1 = accounts[1]
 	const friend1 = accounts[2]
   const friend2 = accounts[3]
-  const friend3 = accounts[4]
+  const nonuser = accounts[4]
   const userName1 = "kseniya292"
   const userName2 = "Vivian"
   const userName3 = "Zoe"
@@ -48,6 +49,9 @@ contract('UserFactory', function (accounts) {
       const friends = await paymentAppInstance.getMyFriends({from: user1});
       assert.equal(friends[0], friend1)
       assert.equal(friends[1], friend2)
+    })
+    it('should revert if called from address that is not a user', async function () {
+      await expectRevert(paymentAppInstance.addFriend(friend1, {from: nonuser}), "user must be registered user");
     })
   })
   describe('events', function () {

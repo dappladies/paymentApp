@@ -4,18 +4,21 @@ This is a test project for DApp Ladies.
 
 Make sure an instance of ganache-cli is running `ganache-cli`
 
-#### Setup
+### Setup
 
 ```
 git clone https://github.com/dappladies/paymentApp.git
 npm install
 ```
 
-#### Testing
+### Testing
 To run tests, make sure you have `ganache` running in your terminal
+
 On another tab, run `truffle test`
 
-#### Compile
+### Interact
+To interact with the application through the terminal, run the following commands:
+
 ```
 truffle console
 migrate
@@ -37,11 +40,8 @@ After you do this, you should see something like:
    > total cost:          0.04182934 ETH
 ```
 
-Make sure you copy the contract address because you will use it to interact with the functions.
+Copy the contract address and set a contract variable in your terminal.
 
-#### Interact
-
-Insert the copied contract address here:
 ```
 const contract = await UserFactory.at('0x2300e34F11cAbf935D752FA19325A15966108a53');
 ```

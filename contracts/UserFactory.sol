@@ -39,7 +39,7 @@ using SafeMath for uint256;
   uint public counter = 0;
 
   modifier onlyUser() {
-    require(isUser[msg.sender]);
+    require(isUser[msg.sender], "user must be registered user");
     _;
   }
 
@@ -118,7 +118,7 @@ using SafeMath for uint256;
     return eventToUsers[_id];
   }
 
-  function addFundsToEvent(uint _id, uint _amount) public onlyUser {
+  function addFundsToEvent(uint _id, uint _amount) public onlyUser eventNotOver(_id) {
     require(_isEventParticipant(_id, msg.sender));
     // adds to event balance
     eventStruct[_id].eventBalance = eventStruct[_id].eventBalance.add(_amount);
