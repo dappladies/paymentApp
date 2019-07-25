@@ -11,6 +11,10 @@ git clone https://github.com/dappladies/paymentApp.git
 npm install
 ```
 
+#### Testing
+To run tests, make sure you have `ganache` running in your terminal
+On another tab, run `truffle test`
+
 #### Compile
 ```
 truffle console
